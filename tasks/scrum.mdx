@@ -1,0 +1,162 @@
+---
+title: "Scrum: sprint-based academic project management in EIC"
+description: "Manage work in time-boxed sprints with PROJEIC's Scrum board. Plan your backlog, run burndown charts, and track sprint history on a timeline."
+---
+
+Scrum in PROJEIC organizes work into **sprints** — short, fixed iterations where your team commits to a defined set of tasks. Each sprint has a name, a goal, and a start and end date. Tasks are pulled from the backlog into a sprint during a planning session, then tracked on a Kanban-style board for the duration of the sprint. When the sprint ends, you mark it complete and begin planning the next one.
+
+## Sprint lifecycle
+
+Sprints move through three statuses:
+
+| Status | Description |
+|---|---|
+| `PLANNING` | The sprint has been created but not started. Tasks can be added or removed during this phase. |
+| `ACTIVE` | The sprint is running. The board shows only tasks assigned to this sprint, and the burndown chart begins tracking progress. |
+| `COMPLETED` | The sprint has been closed. Its tasks and history remain accessible in the **Timeline** view. |
+
+<Warning>
+  Only one sprint can be `ACTIVE` at a time per project. Attempting to start a second sprint while one is already active will fail. Complete the current sprint before starting the next one.
+</Warning>
+
+## Managing a sprint
+
+### Creating, starting, and completing a sprint
+
+<Steps>
+  <Step title="Open Sprint Planning">
+    Navigate to your Scrum project and select the **Planificación** (Planning) view. This view is shown automatically when no sprint is active.
+  </Step>
+  <Step title="Create a sprint">
+    Click **Crear Sprint**. Enter a **name** and an optional **goal** that describes what the team aims to deliver in this iteration.
+  </Step>
+  <Step title="Populate the sprint backlog">
+    Drag tasks from the **Product Backlog** panel on the left into the sprint panel on the right. Tasks with no `sprintId` appear in the backlog. You can also create new tasks directly from the planning view.
+  </Step>
+  <Step title="Start the sprint">
+    Once the sprint has at least one task, click **Iniciar Sprint**. The sprint status changes to `ACTIVE` and the board view switches to show sprint tasks.
+  </Step>
+  <Step title="Work the sprint">
+    During the sprint, team members move tasks across board columns as work progresses. Use the **Burndown** view to monitor remaining work against the ideal pace.
+  </Step>
+  <Step title="Complete the sprint">
+    When the sprint period ends, click **Finalizar Sprint** in the active sprint banner. The sprint status changes to `COMPLETED` and all its tasks and dates are preserved in the **Timeline** view.
+  </Step>
+</Steps>
+
+### GraphQL operations
+
+<CodeGroup>
+
+```graphql fetch sprints
+query GetSprintsByProject($projectId: String!) {
+  sprintsByProject(projectId: $projectId) {
+    id
+    name
+    goal
+    status
+    startDate
+    endDate
+    projectId
+  }
+}
+```
+
+```graphql create sprint
+mutation CreateSprint($input: CreateSprintInput!) {
+  createSprint(input: $input) {
+    id
+    name
+    goal
+    status
+    startDate
+    endDate
+    projectId
+  }
+}
+```
+
+```graphql start sprint
+mutation StartSprint($id: String!, $projectId: String!) {
+  startSprint(id: $id, projectId: $projectId) {
+    id
+    name
+    status
+    startDate
+  }
+}
+```
+
+```graphql complete sprint
+mutation CompleteSprint($id: String!) {
+  completeSprint(id: $id) {
+    id
+    name
+    status
+    endDate
+  }
+}
+```
+
+</CodeGroup>
+
+## Sprint fields
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | string | Display name for the sprint (e.g., `Sprint 1 — MVP Login`). |
+| `goal` | string | A sentence describing what the sprint should deliver. Shown in the sprint header during the active phase. |
+| `status` | enum | `PLANNING`, `ACTIVE`, or `COMPLETED`. |
+| `startDate` | datetime | When the sprint begins. Set automatically when you call `startSprint`. |
+| `endDate` | datetime | When the sprint ends. Set automatically when you call `completeSprint`. |
+| `projectId` | string | The project this sprint belongs to. |
+
+<Tip>
+  Write a concise sprint goal before adding tasks. A clear goal — for example, "Users can register, log in, and reset their password" — helps the team stay focused and makes it easier to decide whether a task belongs in the sprint.
+</Tip>
+
+## Sprint planning view
+
+The planning view presents two panels side by side:
+
+- **Product Backlog** (left) — all tasks in the project that are not assigned to any sprint (`sprintId` is null). Tasks show their title and priority badge.
+- **Sprint backlog** (right) — tasks assigned to the currently selected sprint. A dropdown at the top of this panel lets you switch between sprints in `PLANNING` status if you have more than one prepared.
+
+Drag a task from the backlog panel into the sprint panel to assign it (`sprintId` is updated). Drag it back to remove it from the sprint. Tasks in `DONE` status show a completion indicator.
+
+## Burndown chart
+
+The **Burndown** tab shows a line chart for the active sprint with two series:
+
+- **Ideal pace** (dashed grey line) — a straight line from the total task count on day one to zero on the last day of the sprint.
+- **Remaining tasks** (solid blue line) — the actual number of incomplete tasks plotted each day.
+
+When the blue line is above the grey line, the team is behind the ideal pace. When it is below, the team is ahead. The chart updates as tasks are moved to `DONE`.
+
+The burndown data is fetched using the `sprintBurndown` query, which returns one data point per day:
+
+```graphql
+query GetSprintBurndown($sprintId: String!) {
+  sprintBurndown(sprintId: $sprintId) {
+    dayLabel
+    date
+    ideal
+    real
+  }
+}
+```
+
+## Sprint timeline
+
+The **Cronograma / Historial** (Timeline) tab shows all sprints for the project — past and present — as horizontal bars on a timeline. Use this view to review sprint history, compare durations, and see which tasks were completed in each iteration.
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Boards and tasks overview" icon="layout-panel-left" href="/tasks/boards">
+    Reference for all board and task fields and GraphQL mutations.
+  </Card>
+  <Card title="Scrumban" icon="table-columns" href="/tasks/scrumban">
+    Combine sprint cadence with continuous Kanban columns.
+  </Card>
+</CardGroup>

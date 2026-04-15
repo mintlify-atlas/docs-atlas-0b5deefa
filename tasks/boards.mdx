@@ -1,0 +1,190 @@
+---
+title: "Boards and tasks: project workflow overview in PROJEIC"
+description: "Boards are the columns that organize your project's tasks. Learn how to create and configure boards and tasks across any methodology."
+---
+
+Every project in PROJEIC organizes work through **boards** — the columns that form your workflow. Tasks live inside boards, moving from left to right as work progresses. The exact structure of your boards depends on the methodology you chose when creating the project: Kanban projects use free-form continuous columns, Scrum projects attach tasks to sprint iterations, and Scrumban projects combine both approaches.
+
+## Board fields
+
+Each board column has the following fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | string | Display name shown as the column header. |
+| `color` | string | Hex color used for the column's top border accent. |
+| `position` | number | Zero-based integer that controls column order from left to right. |
+| `wipLimit` | number | Optional Work In Progress limit. When the number of tasks in the column exceeds this value, the column header turns red and shows a warning. |
+
+### WIP limits
+
+Setting a `wipLimit` on a column enforces a Work In Progress limit — a core Kanban practice that prevents work from piling up in a single stage. When a column is over its limit, PROJEIC highlights it visually so your team can focus on finishing existing tasks before pulling in new ones. WIP limits are optional and most useful on columns like "In Progress" or "In Review" where bottlenecks tend to form.
+
+## Creating a board column
+
+<Steps>
+  <Step title="Open your project">
+    Navigate to your project and select the **Task Management** tab. Only users with the **LEADER** role can create and edit board columns.
+  </Step>
+  <Step title="Click Add column">
+    At the end of the column list, click the dashed **Add column** button.
+  </Step>
+  <Step title="Fill in the column details">
+    Enter a **name**, choose a **color**, and optionally set a **WIP limit**. The position is assigned automatically based on the current number of columns.
+  </Step>
+  <Step title="Save">
+    Click **Create** to add the column to your board. It appears immediately at the end of the column list.
+  </Step>
+</Steps>
+
+### GraphQL mutations
+
+Use the following mutations to manage boards programmatically:
+
+<CodeGroup>
+
+```graphql create board
+mutation CreateBoard($input: CreateBoardInput!) {
+  createBoard(createBoardInput: $input) {
+    id
+    name
+    position
+    color
+    wipLimit
+  }
+}
+```
+
+```graphql update board
+mutation UpdateBoard($input: UpdateBoardInput!) {
+  updateBoard(updateBoardInput: $input) {
+    id
+    name
+    position
+    color
+    wipLimit
+  }
+}
+```
+
+```graphql delete board
+mutation removeBoard($id: String!) {
+  removeBoard(id: $id) {
+    id
+  }
+}
+```
+
+</CodeGroup>
+
+## Task fields
+
+Tasks are the individual units of work inside a board column. Each task has:
+
+| Field | Type | Description |
+|---|---|---|
+| `title` | string | Short name describing the work. Required. |
+| `description` | string | Optional longer explanation of the task. |
+| `priority` | enum | `LOW`, `MEDIUM`, `HIGH`, or `URGENT`. Displayed as a colored badge on the task card. |
+| `status` | enum | Derived from the board column name: `BACKLOG`, `TODO`, `IN_PROGRESS`, `IN_REVIEW`, or `DONE`. |
+| `startDate` | datetime | Optional date when work begins. |
+| `dueDate` | datetime | Optional deadline. Shown on the task card. |
+| `boardId` | string | The column this task belongs to. |
+| `assigneeId` | string | The project member assigned to this task. |
+| `sprintId` | string | Links the task to a sprint. Required in Scrum projects. |
+| `expectedResultId` | string | Optional link to an expected result for outcome tracking. |
+
+<Note>
+  Task `status` is calculated automatically from the name of the destination board column when a task is created or moved. For example, a column named "In Progress" sets the status to `IN_PROGRESS`.
+</Note>
+
+## Creating a task
+
+<Steps>
+  <Step title="Click New task">
+    In the board toolbar, click **New task**, or click **Add card** at the bottom of any column to pre-select that column.
+  </Step>
+  <Step title="Enter the title">
+    Type a clear, action-oriented title. This is the only required field.
+  </Step>
+  <Step title="Set column and priority">
+    Choose the destination **column** and a **priority** level. Both fields are required.
+  </Step>
+  <Step title="Optionally assign and schedule">
+    Assign the task to a project member, and set **start date** and **due date** if the work has time constraints.
+  </Step>
+  <Step title="Save">
+    Click **Create task**. The task appears in the selected column immediately.
+  </Step>
+</Steps>
+
+### GraphQL mutations
+
+<CodeGroup>
+
+```graphql create task
+mutation CreateTask($input: CreateTaskInput!) {
+  createTask(createTaskInput: $input) {
+    id
+    title
+    description
+    status
+    priority
+    position
+    startDate
+    dueDate
+    boardId
+    assigneeId
+    sprintId
+    expectedResultId
+    createdAt
+  }
+}
+```
+
+```graphql update task
+mutation UpdateTask($input: UpdateTaskInput!) {
+  updateTask(updateTaskInput: $input) {
+    id
+    title
+    description
+    status
+    priority
+    position
+    startDate
+    dueDate
+    boardId
+    assigneeId
+    sprintId
+    expectedResultId
+    updatedAt
+  }
+}
+```
+
+```graphql delete task
+mutation RemoveTask($id: String!) {
+  removeTask(id: $id) {
+    id
+  }
+}
+```
+
+</CodeGroup>
+
+## Explore by methodology
+
+<CardGroup cols={2}>
+  <Card title="Kanban" icon="columns-3" href="/tasks/kanban">
+    Continuous flow with columns, WIP limits, and multiple views including List, Calendar, and Gantt.
+  </Card>
+  <Card title="Scrum" icon="rotate" href="/tasks/scrum">
+    Sprint-based iterations with planning, burndown charts, and sprint timelines.
+  </Card>
+  <Card title="Scrumban" icon="table-columns" href="/tasks/scrumban">
+    A hybrid methodology combining Kanban columns with Scrum sprint cadence.
+  </Card>
+  <Card title="Projects overview" icon="folder-open" href="/projects/overview">
+    Learn how to create a project and choose a methodology.
+  </Card>
+</CardGroup>

@@ -1,0 +1,109 @@
+---
+title: "Notifications and project invitations"
+description: "Manage PROJEIC notifications at /misc/notificaciones — view invitations and alerts, mark them read, and accept or decline project invitations inline."
+---
+
+PROJEIC sends notifications to keep you informed about activity that affects you: when someone invites you to join a project, when tasks require your attention, or when something changes on the platform. You can view all your notifications at `/misc/notificaciones`, filter them by read status, mark them as read individually or all at once, and respond to project invitations without leaving the page.
+
+<Note>
+  Unread notifications are indicated by a pulsing badge in the navigation bar. The badge disappears once all notifications are marked as read.
+</Note>
+
+## Notification types
+
+| Type                 | Description                                                                 |
+| -------------------- | --------------------------------------------------------------------------- |
+| `PROJECT_INVITATION` | Someone has invited you to join a project. You can accept or decline inline. |
+| Project updates      | Changes to projects you are a member of.                                    |
+| Task assignments     | Notifications when a task is assigned to you.                               |
+
+## Notification fields
+
+Each notification object returned by the API contains the following fields:
+
+| Field       | Type      | Description                                                                            |
+| ----------- | --------- | -------------------------------------------------------------------------------------- |
+| `id`        | `ID`      | Unique identifier for the notification.                                                |
+| `type`      | `string`  | The notification category (e.g. `PROJECT_INVITATION`).                                 |
+| `message`   | `string`  | Human-readable description of the event.                                               |
+| `isRead`    | `boolean` | Whether you have already viewed this notification.                                     |
+| `createdAt` | `string`  | ISO 8601 timestamp of when the notification was created.                               |
+| `entityId`  | `string?` | The ID of the related entity (e.g. the project ID for a `PROJECT_INVITATION`). Optional. |
+
+## Fetching notifications
+
+Use the `myNotifications` query to retrieve your notifications. Pass `unreadOnly: true` to show only notifications you have not yet read.
+
+```graphql
+query MyNotifications($unreadOnly: Boolean) {
+  myNotifications(unreadOnly: $unreadOnly) {
+    id
+    type
+    message
+    isRead
+    createdAt
+    entityId
+  }
+}
+```
+
+The notifications page uses `unreadOnly: false` (the default) to show all notifications, and `unreadOnly: true` when you switch to the **No leídas** (Unread) filter tab.
+
+## Marking notifications as read
+
+### Mark a single notification
+
+Call `markNotificationAsRead` with the notification's `id` to mark it as read. This mutation is triggered automatically when you click an unread notification on the page.
+
+```graphql
+mutation MarkNotificationAsRead($id: ID!) {
+  markNotificationAsRead(id: $id) {
+    id
+    isRead
+  }
+}
+```
+
+### Mark all as read
+
+Call `markAllNotificationsAsRead` to mark every unread notification as read at once.
+
+```graphql
+mutation MarkAllNotificationsAsRead {
+  markAllNotificationsAsRead
+}
+```
+
+## Responding to project invitations
+
+When someone adds you to a project, you receive a `PROJECT_INVITATION` notification. You can accept or decline the invitation directly from the notifications page.
+
+<Steps>
+  <Step title="Open the notifications page">
+    Navigate to `/misc/notificaciones`. Unread notifications appear with a highlighted left border and a pulsing indicator dot.
+  </Step>
+  <Step title="Find the invitation">
+    Project invitations are marked with a distinct icon and display **Aceptar** (Accept) and **Rechazar** (Decline) buttons below the message text.
+  </Step>
+  <Step title="Accept or decline">
+    Click **Aceptar** to accept the invitation, or **Rechazar** to decline. Both actions call the `respondToInvitation` mutation with the corresponding `accept` value.
+
+    ```graphql
+    mutation RespondToInvitation($projectId: ID!, $accept: Boolean!) {
+      respondToInvitation(projectId: $projectId, accept: $accept) {
+        id
+        role
+      }
+    }
+    ```
+
+    The `projectId` is taken from the notification's `entityId` field.
+  </Step>
+  <Step title="Join the project">
+    If you accept, PROJEIC adds you to the project with the role assigned by the inviting member and redirects you to the project page after a brief moment. The notification is removed from your list once your response is processed.
+  </Step>
+</Steps>
+
+<Note>
+  Declining an invitation removes the notification from your list without adding you to the project. If the invitation was already processed (for example, if you accepted from another device), PROJEIC handles the duplicate gracefully without showing an error.
+</Note>

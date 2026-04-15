@@ -1,0 +1,130 @@
+---
+title: "Activity feed and audit logs in PROJEIC"
+description: "PROJEIC logs every action taken inside a project and surfaces them as a structured audit trail for supervisors and as a personal activity feed on the dashboard."
+---
+
+Every meaningful action in PROJEIC — creating a task, uploading evidence, changing a member's role, moving a card between columns — is recorded as an activity log entry. These logs serve two purposes: a project-level audit trail that supervisors can inspect, and a personal dashboard feed that shows each user what happened across their projects in the past week.
+
+## Project-level audit log
+
+The `GET_ACTIVITY_LOGS` query returns a chronological list of all actions taken inside a specific project. It is scoped to one project at a time and requires membership.
+
+```graphql
+query GetActivityLogs($projectId: String!) {
+  activityLogsByProject(projectId: $projectId) {
+    id
+    action
+    entity
+    entityId
+    meta
+    createdAt
+    user {
+      name
+      avatarUrl
+    }
+  }
+}
+```
+
+### Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `String` | Unique log entry ID |
+| `action` | `String` | The action performed (see action types below) |
+| `entity` | `String` | The kind of object affected (see entity types below) |
+| `entityId` | `String` | ID of the specific object that was affected |
+| `meta` | `String` | JSON-encoded metadata with action-specific detail |
+| `createdAt` | `DateTime` | Timestamp of the action |
+| `user.name` | `String` | Display name of the user who performed the action |
+| `user.avatarUrl` | `String` | Avatar URL for the user |
+
+### Action types
+
+| Action | Symbol | Meaning |
+|---|---|---|
+| `CREATED` | `[+]` | An object was created |
+| `UPDATED` | `[~]` | An object was modified |
+| `DELETED` | `[-]` | An object was removed |
+| `MOVED` | `[→]` | A task was moved between columns |
+| `ASSIGNED` | `[@]` | A task was assigned to a member |
+| `JOINED` | `[>]` | A member accepted a project invitation |
+| `LEFT` | `[<]` | A member left the project |
+| `COMMENTED` | `[#]` | A comment was added to a task |
+
+### Entity types
+
+Entity types correspond to the main objects in PROJEIC:
+
+- `PROJECT` — project configuration changes
+- `TASK` — task creation, updates, moves, assignments, and comments
+- `BOARD` — board additions and changes
+- `SPRINT` — sprint creation and management
+- `MEMBER` — invitations, role changes, joins, and departures
+- `EXPECTED_RESULT` — expected result creation, status updates, and evidence uploads
+
+### The `meta` field
+
+The `meta` field is a JSON string. Its shape varies by action type:
+
+```typescript
+// Status change (UPDATED / TASK or EXPECTED_RESULT)
+{ "previousStatus": "IN_PROGRESS", "newStatus": "DONE" }
+
+// Role change (UPDATED / MEMBER)
+{ "previousRole": "STUDENT", "newRole": "SUPERVISOR" }
+
+// Evidence upload (UPDATED / EXPECTED_RESULT)
+{ "addedEvidence": true, "title": "Final Report" }
+
+// Field edits (UPDATED / PROJECT or TASK)
+{
+  "changes": {
+    "title": { "from": "Old title", "to": "New title" },
+    "isPublic": { "from": false, "to": true }
+  }
+}
+```
+
+Parse `meta` with `JSON.parse` before reading its contents — it is stored and returned as a raw string.
+
+## Personal dashboard feed
+
+The `GET_DASHBOARD_ACTIVITY` query returns data for the authenticated user's personal dashboard view. Unlike the project-level audit log, this query is not scoped to a single project — it aggregates activity across all projects the user belongs to.
+
+```graphql
+query GetDashboardActivity {
+  myWeeklyActivityPoints
+  myRecentFeed {
+    id
+    action
+    entity
+    createdAt
+    meta
+    user {
+      name
+      avatarUrl
+    }
+    project {
+      name
+    }
+  }
+}
+```
+
+| Field | Description |
+|---|---|
+| `myWeeklyActivityPoints` | Numeric score for the authenticated user's activity in the past 7 days |
+| `myRecentFeed[].action` | Action type string, same vocabulary as the project audit log |
+| `myRecentFeed[].entity` | Entity type affected |
+| `myRecentFeed[].project.name` | Name of the project in which the action occurred |
+| `myRecentFeed[].meta` | JSON metadata, same structure as the project log |
+| `myRecentFeed[].user` | The user who performed the action |
+
+<Note>
+  The project audit log (`activityLogsByProject`) and the dashboard feed (`myRecentFeed`) draw from the same underlying log entries, but they serve different audiences. The project log is a complete, project-scoped record intended for supervision and review. The dashboard feed is a personal, cross-project summary intended to keep individual members oriented across their workload. The dashboard feed may apply additional filtering (e.g. recent items only), while the project log returns the full history.
+</Note>
+
+<Tip>
+  For academic supervision, the project audit log is the most reliable tool. It gives professors and supervisors a tamper-evident record of who did what and when — useful for resolving disputes, evaluating individual contribution, and generating progress reports at semester review.
+</Tip>

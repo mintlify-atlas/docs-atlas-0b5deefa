@@ -1,0 +1,159 @@
+---
+title: "Project members and role permissions"
+description: "PROJEIC projects use four roles — Leader, Supervisor, Student, and External. Learn what each role can do and how to invite, change, and remove project members."
+---
+
+PROJEIC uses role-based access control at the project level. Every person on a project is a member with one of four roles: Leader, Supervisor, Student, or External. Roles are assigned when sending an invitation and can be changed afterward by a project Leader. Membership status can be `PENDING` (invitation not yet accepted) or `ACTIVE` (invitation accepted and member is part of the team).
+
+## Roles and permissions
+
+| Permission | Leader | Supervisor | Student | External |
+|---|---|---|---|---|
+| View project and boards | Yes | Yes | Yes | Yes |
+| Create and update own tasks | Yes | Yes | Yes | No |
+| Update board column state | Yes | No | Yes | No |
+| Create tasks for others | Yes | No | No | No |
+| Edit project settings | Yes | No | No | No |
+| Manage board columns | Yes | No | No | No |
+| Manage sprints | Yes | No | No | No |
+| Invite and remove members | Yes | No | No | No |
+| Change member roles | Yes | No | No | No |
+| Review expected results | Yes | Yes | No | No |
+| Monitor metrics and reports | Yes | Yes | No | No |
+| Comment and give feedback | Yes | Yes | Yes | No |
+| Delete project | Yes | No | No | No |
+| Archive project | Yes | No | No | No |
+
+### Role descriptions
+
+**Leader** — Full control over the project. A Leader can edit all project settings, manage board columns and sprints, invite new members, change any member's role, and delete or archive the project. Every project has at least one Leader (the creator is automatically assigned this role).
+
+**Supervisor** — A read-and-review role, typically assigned to academic supervisors or professors. Supervisors can view all project content, monitor task metrics, and review Expected Results and evidence uploads. They cannot modify tasks or team structure.
+
+**Student** — The standard active contributor role. Students can create and update tasks assigned to them and move tasks across board columns. They cannot change project settings or manage other members.
+
+**External** — Read-only access. External collaborators can view the project but cannot create tasks, update board state, or take any write action. Intended for stakeholders outside UCN (non-`@ucn.cl` email domains).
+
+<Note>
+Internal UCN members (`@alumnos.ucn.cl`, `@ucn.cl`, `@ce.ucn.cl`) can be assigned Leader, Supervisor, or Student roles. Members with non-UCN email addresses are automatically treated as External collaborators.
+</Note>
+
+## Invite a member
+
+<Steps>
+  <Step title="Open the members panel">
+    Navigate to your project and open the **Members** tab or click **Add** in the team section of the project overview.
+  </Step>
+  <Step title="Enter the member's email">
+    Type the institutional email address of the person you want to invite. For UCN members use `@alumnos.ucn.cl`, `@ucn.cl`, or `@ce.ucn.cl`. For external collaborators, check the **External collaborator** checkbox and enter any valid email address.
+  </Step>
+  <Step title="Assign a role">
+    Select the role from the dropdown. For internal members: Leader, Student, or Supervisor. External collaborators are automatically assigned the External role.
+  </Step>
+  <Step title="Send the invitation">
+    Click **Send invitation**. The system sends a notification to the invitee. Their status will show as `PENDING` until they accept.
+  </Step>
+  <Step title="Member accepts the invitation">
+    The invitee receives a notification in PROJEIC. They respond via the `RESPOND_TO_INVITATION` mutation. On acceptance their status changes to `ACTIVE` and they gain access according to their role.
+  </Step>
+</Steps>
+
+## GraphQL mutations
+
+### `ADD_PROJECT_MEMBER`
+
+Sends an invitation to a user. Creates a member record with `status: PENDING`.
+
+```graphql
+mutation AddProjectMember($input: AddProjectMemberInput!) {
+  addProjectMember(input: $input) {
+    id
+    role
+    status
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "projectId": "your-project-id",
+    "email": "student@alumnos.ucn.cl",
+    "role": "STUDENT"
+  }
+}
+```
+
+**`AddProjectMemberInput` fields:**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `projectId` | `ID` | Yes | The project to add the member to |
+| `email` | `String` | Yes | Institutional or external email address |
+| `role` | `String` | Yes | `LEADER`, `STUDENT`, `SUPERVISOR`, or `EXTERNAL` |
+
+### `UPDATE_PROJECT_MEMBER_ROLE`
+
+Changes the role of an existing active member. Only a project Leader can call this.
+
+```graphql
+mutation UpdateProjectMemberRole($input: UpdateProjectMemberInput!) {
+  updateProjectMemberRole(input: $input) {
+    id
+    role
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "memberId": "member-record-id",
+    "role": "SUPERVISOR"
+  }
+}
+```
+
+### `REMOVE_PROJECT_MEMBER`
+
+Removes a member from the project permanently. Requires the member record ID (not the user ID).
+
+```graphql
+mutation RemoveProjectMember($memberId: ID!) {
+  removeProjectMember(memberId: $memberId)
+}
+```
+
+```json
+{
+  "memberId": "member-record-id"
+}
+```
+
+<Warning>
+Removing a member is immediate and does not send a notification. Tasks previously assigned to that member remain in the project but will no longer have an assignee.
+</Warning>
+
+### `RESPOND_TO_INVITATION`
+
+Called by the invited user to accept or decline a project invitation. Pass `accept: true` to join the project or `accept: false` to decline.
+
+```graphql
+mutation RespondToInvitation($projectId: ID!, $accept: Boolean!) {
+  respondToInvitation(projectId: $projectId, accept: $accept) {
+    id
+    role
+  }
+}
+```
+
+```json
+{
+  "projectId": "your-project-id",
+  "accept": true
+}
+```
+
+<Note>
+Project invitations are delivered through PROJEIC's notifications system (`myNotifications`). When a Leader invites someone, a notification of type `PROJECT_INVITATION` is created for the target user. The notification includes `entityId` which corresponds to the `projectId` needed for `RESPOND_TO_INVITATION`. Users can view unread notifications with `myNotifications(unreadOnly: true)` and mark them as read with `markNotificationAsRead` after responding.
+</Note>

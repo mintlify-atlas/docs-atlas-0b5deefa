@@ -1,0 +1,180 @@
+---
+title: "Managing projects in PROJEIC"
+description: "Create Classic or Hybrid projects in PROJEIC, set status and visibility, manage the lifecycle from STARTING to COMPLETED, and archive or delete projects."
+---
+
+A project in PROJEIC is the central workspace where your team tracks tasks, boards, sprints, and expected results. Every project belongs to either an institutional context (linked to an EIC subject with a supervising professor) or a personal/curricular context (free-standing, created at your own initiative). Both types share the same fields, lifecycle, and visibility controls.
+
+## Project modes
+
+PROJEIC offers two management modes, chosen at creation and editable afterward:
+
+- **Classic mode** (`CLASSIC`) — Task-based progress tracked through agile methodologies (Kanban, Scrum, or Scrumban). Best for software engineering courses and collaborative projects where you need boards and sprint tracking.
+- **PROJEIC Native / Hybrid mode** (`HYBRID`) — Outcome-based progress tracked through Expected Results and evidence uploads. Designed specifically for EIC's curricular validation workflow. When this mode is active, methodology is set to `NONE` internally.
+
+### Institutional vs. personal projects
+
+| Field | Institutional | Personal |
+|---|---|---|
+| `isInstitutional` | `true` | `false` |
+| `subjectId` | Required (linked to a subject) | Not set |
+| Professor | Assigned from the subject's professors list | None |
+| Visibility context | EIC subject scope | Personal dashboard |
+
+When you mark a project as institutional, you must select a subject (`subjectId`) and an assigned professor. The project then appears within that subject's context for supervisors.
+
+## Project visibility
+
+Set `isPublic: true` to make a project accessible to anyone without login — useful for showcasing work on the public projects directory. Private projects (`isPublic: false`) are only visible to authenticated members with an active role.
+
+## Project status lifecycle
+
+Projects move through five statuses. You can set any status at any time via `UpdateProjectInput`.
+
+```
+STARTING → ACTIVE → ON_HOLD → COMPLETED
+                  ↘ CANCELLED
+```
+
+| Status | Meaning |
+|---|---|
+| `STARTING` | Project has been created but work hasn't begun yet |
+| `ACTIVE` | Project is currently in progress |
+| `ON_HOLD` | Work is temporarily paused |
+| `COMPLETED` | All work is done and the project is closed successfully |
+| `CANCELLED` | Project was abandoned before completion |
+
+<Note>
+The creation form exposes `ACTIVE` and `ON_HOLD` as initial status options. The full status range — including `STARTING`, `COMPLETED`, and `CANCELLED` — is available when editing a project via `UpdateProjectInput`.
+</Note>
+
+## Create a project
+
+<Steps>
+  <Step title="Open the creation modal">
+    From your dashboard, click **New project**. The creation modal opens.
+  </Step>
+  <Step title="Choose a management mode">
+    Select **Classic mode** for task-based agile workflows or **PROJEIC Native (EIC)** for outcome-based evidence tracking.
+  </Step>
+  <Step title="Fill in the required fields">
+    Enter a project name (3–100 characters). A description (up to 500 characters), color label, and initial status are optional but recommended.
+  </Step>
+  <Step title="Set institutional context (optional)">
+    Toggle **This is a subject project (Institutional)** if the project belongs to an EIC course. Then select the subject and the assigned professor.
+  </Step>
+  <Step title="Choose methodology and visibility">
+    If you are in Classic mode, select a methodology (Kanban, Scrum, or Scrumban). Toggle **Make project public** if you want it listed on the public directory.
+  </Step>
+  <Step title="Invite initial members (optional)">
+    Add team members by institutional email (`@alumnos.ucn.cl`, `@ucn.cl`, `@ce.ucn.cl`) or mark them as external collaborators. Assign each person a role before submitting.
+  </Step>
+  <Step title="Submit">
+    Click **Create project**. The project is created and any pending member invitations are sent immediately.
+  </Step>
+</Steps>
+
+## GraphQL mutations
+
+### `CREATE_PROJECT`
+
+```graphql
+mutation CreateProject($input: CreateProjectInput!) {
+  createProject(input: $input) {
+    id
+    name
+    description
+    color
+    status
+    methodology
+    isPublic
+    isArchived
+    createdAt
+    updatedAt
+    mode
+  }
+}
+```
+
+**`CreateProjectInput` fields:**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | `String` | Yes | 3–100 characters |
+| `description` | `String` | No | Up to 500 characters |
+| `color` | `String` | No | Hex color, e.g. `#2596BE` |
+| `status` | `ProjectStatus` | No | Defaults to `ACTIVE` |
+| `methodology` | `ProjectMethodology` | No | Defaults to `KANBAN` |
+| `isPublic` | `Boolean` | No | Defaults to `false` |
+| `mode` | `String` | No | `CLASSIC` or `HYBRID` |
+| `isInstitutional` | `Boolean` | No | `true` for subject projects |
+| `subjectId` | `ID` | Conditional | Required when `isInstitutional: true` |
+| `professorId` | `ID` | Conditional | Required when `isInstitutional: true` |
+
+### `UPDATE_PROJECT`
+
+```graphql
+mutation UpdateProject($input: UpdateProjectInput!) {
+  updateProject(input: $input) {
+    id
+    name
+    description
+    isInstitutional
+    subjectId
+    mode
+  }
+}
+```
+
+**`UpdateProjectInput` fields:**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | `ID` | Yes | The project's CUID |
+| `name` | `String` | No | |
+| `description` | `String` | No | Pass `undefined` to clear |
+| `color` | `String` | No | |
+| `status` | `ProjectStatus` | No | Full range available |
+| `methodology` | `ProjectMethodology` | No | Set to `NONE` automatically when mode is `HYBRID` |
+| `isPublic` | `Boolean` | No | |
+| `isInstitutional` | `Boolean` | No | |
+| `subjectId` | `ID \| null` | No | Pass `null` to unlink from subject |
+| `mode` | `String` | No | `CLASSIC` or `HYBRID` |
+
+## Archive vs. delete
+
+<Accordion title="What is the difference between archiving and deleting a project?">
+
+**Archiving** is a soft delete. It sets `isArchived: true` on the project record. The project remains in the database with all its data intact — boards, tasks, sprints, members, and activity logs are preserved. Archived projects are hidden from the default listing unless `includeArchived: true` is passed to the filter. Archiving is reversible.
+
+**Deleting** is a hard delete with full cascade. The project and every entity linked to it (tasks, board columns, sprints, expected results, activity logs, member records) are permanently removed from the database. This action cannot be undone.
+
+Use archive when you want to wind down a project safely and preserve its history. Use delete only when you are certain the project and all its data can be discarded permanently.
+
+</Accordion>
+
+### `ARCHIVE_PROJECT`
+
+```graphql
+mutation ArchiveProject($id: ID!) {
+  archiveProject(id: $id) {
+    id
+    name
+    isArchived
+  }
+}
+```
+
+### `DELETE_PROJECT`
+
+```graphql
+mutation DeleteProject($id: ID!) {
+  deleteProject(id: $id) {
+    id
+  }
+}
+```
+
+<Warning>
+`deleteProject` performs a permanent cascade delete. All boards, columns, tasks, sprints, members, expected results, and activity logs associated with the project are removed. This cannot be reversed.
+</Warning>

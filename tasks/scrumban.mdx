@@ -1,0 +1,61 @@
+---
+title: "Scrumban: hybrid Kanban and Scrum workflow in PROJEIC"
+description: "Scrumban in PROJEIC blends Kanban's continuous column flow with Scrum's sprint cadence, giving teams structure without sacrificing flexibility."
+---
+
+Scrumban is a hybrid methodology that borrows the visual column flow of Kanban and the sprint rhythm of Scrum. In a Scrumban project, work moves through columns continuously — just like Kanban — but is still organized into sprint iterations that give the team a regular cadence for planning and review. PROJEIC's Scrumban board is designed for teams that need more structure than a pure Kanban flow but more flexibility than strict Scrum.
+
+## How Scrumban works in PROJEIC
+
+A Scrumban board uses the same column-and-card layout as the Kanban board. Tasks live in columns and move from left to right as work progresses. At the same time, tasks can be linked to a sprint via their `sprintId`, giving the team a way to plan iterations and track progress over time without losing the continuous-flow benefits of Kanban.
+
+This means you can:
+
+- Set WIP limits on columns to prevent bottlenecks (Kanban behaviour).
+- Group tasks into sprints and plan iterations (Scrum behaviour).
+- Pull work from the backlog into an active sprint at any time, rather than only during a formal sprint planning session.
+
+## When to use Scrumban
+
+<Tip>
+  Scrumban is a good fit for teams that are already working with Kanban and want to add more predictability and review cadence without committing to full Scrum ceremonies. It is also well suited to support and maintenance teams that need to respond to unplanned work (Kanban) but still want to hold regular retrospectives and planning sessions (Scrum).
+</Tip>
+
+## Scrumban vs Kanban vs Scrum
+
+| Feature | Kanban | Scrum | Scrumban |
+|---|---|---|---|
+| Columns and cards | Yes | Yes (during sprint) | Yes |
+| WIP limits | Yes | Optional | Yes |
+| Sprints | No | Yes (time-boxed) | Yes (flexible) |
+| Planning sessions | No | Required | Optional |
+| Backlog | Yes | Yes | Yes |
+| Burndown chart | No | Yes | Depends on sprint usage |
+| Best for | Continuous flow, support, maintenance | New product development, fixed team capacity | Teams transitioning from Kanban to Scrum, or mixed work types |
+
+## The Scrumban board UI
+
+The Scrumban board in PROJEIC displays your project's columns and tasks using the same layout as the Kanban board. Columns show a task count badge, respect WIP limits, and support drag-and-drop reordering. Tasks that are linked to a sprint display their sprint association alongside their priority badge and due date.
+
+Because Scrumban is aware of sprints, you can filter the board to show only tasks belonging to a specific sprint, or leave the filter clear to see all active tasks across the project.
+
+<Note>
+  The Scrumban board is currently in active development. The full sprint-aware column view will be available in an upcoming release. Existing board and task GraphQL operations — `boardsByProject`, `tasksByProject`, and `sprintsByProject` — are all compatible with Scrumban projects today.
+</Note>
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Kanban" icon="columns-3" href="/tasks/kanban">
+    Continuous workflow with columns, WIP limits, and multiple views.
+  </Card>
+  <Card title="Scrum" icon="rotate" href="/tasks/scrum">
+    Sprint-based iterations with planning, burndown charts, and timelines.
+  </Card>
+  <Card title="Boards and tasks overview" icon="layout-panel-left" href="/tasks/boards">
+    Reference for all board and task fields and GraphQL mutations.
+  </Card>
+  <Card title="Project methodologies" icon="diagram-project" href="/projects/methodologies">
+    Understand how to choose a methodology when creating a project.
+  </Card>
+</CardGroup>

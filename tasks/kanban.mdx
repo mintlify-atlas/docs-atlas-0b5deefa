@@ -1,0 +1,126 @@
+---
+title: "Kanban boards: continuous workflow management in PROJEIC"
+description: "Use Kanban in PROJEIC to manage work as a continuous flow across columns, with WIP limits, drag-and-drop cards, and four built-in views."
+---
+
+Kanban in PROJEIC models your project as a continuous workflow — tasks flow through columns from left to right without fixed time-boxes or iterations. You define the columns, set optional WIP limits to prevent bottlenecks, and move tasks by dragging cards between columns. The board updates in real time and any project member with the **LEADER** or **STUDENT** role can create and move tasks.
+
+## Board columns
+
+Columns represent the stages in your workflow. PROJEIC provides four default columns when no custom columns exist — **Backlog**, **To Do**, **In Progress**, and **Done** — and maps each to a task status automatically. When you create custom columns, the status is inferred from the column name.
+
+<Note>
+  Task position within a column is controlled by the `position` field on each task. Tasks are ordered by their `position` value from lowest to highest within the same column. When you drag a task, PROJEIC updates its `position` and `boardId` in a single `updateTask` mutation.
+</Note>
+
+### Fetching board columns
+
+```graphql
+query GetBoardsByProject($projectId: String!) {
+  boardsByProject(projectId: $projectId) {
+    id
+    name
+    position
+    color
+    wipLimit
+  }
+}
+```
+
+### Fetching tasks
+
+Pass an optional `sprintId` to filter tasks belonging to a specific sprint. Without it, all project tasks are returned.
+
+```graphql
+query GetTasksByProject($projectId: String!, $sprintId: String) {
+  tasksByProject(projectId: $projectId, sprintId: $sprintId) {
+    id
+    title
+    description
+    status
+    priority
+    position
+    startDate
+    dueDate
+    boardId
+    assigneeId
+    sprintId
+    expectedResultId
+    createdAt
+    updatedAt
+  }
+}
+```
+
+## WIP limits
+
+Each column has an optional `wipLimit` field. When the number of tasks in the column exceeds this limit, the column header turns red and displays a **Límite excedido** warning. The task count badge also changes to show the current count against the limit (e.g., `4 / 3`).
+
+<Tip>
+  Set WIP limits on your "In Progress" and "In Review" columns to expose bottlenecks early. A column that is frequently over its limit indicates the team is pulling in more work than it can complete — address the backlog before adding new tasks.
+</Tip>
+
+## Configuring columns
+
+Only users with the **LEADER** role can create, edit, or delete board columns.
+
+### Add a column
+
+Click the dashed **Add column** button at the end of the board. Enter a name, choose a color, and optionally set a WIP limit. The new column is appended at the current rightmost position.
+
+### Edit a column
+
+Hover over a column header to reveal the **edit** icon. Click it to open the edit modal where you can change the name, color, and WIP limit. Position reordering is done by updating the `position` field directly via the `updateBoard` mutation.
+
+### Delete a column
+
+Hover over the column header and click the **trash** icon. Deleting a column does not delete its tasks — tasks that belonged to that column remain in the project and can be reassigned.
+
+## Available views
+
+The Kanban toolbar provides four ways to view your project tasks. Your **Board** or **List** view preference is saved in `localStorage` under the key `kanban-view-preference` and restored on your next visit. Calendar and Gantt view selections are not persisted between sessions.
+
+<Tabs>
+  <Tab title="Board">
+    The default view. Tasks appear as cards in their respective columns. You can drag cards between columns to update their status and board assignment. Each column shows a task count badge, and columns over their WIP limit are highlighted in red.
+  </Tab>
+  <Tab title="List">
+    All tasks are shown in a flat table with sortable columns: **Title**, **Priority**, **Status**, **Assignee**, and **Due date**. Click any column header to sort ascending; click again to sort descending. Use this view to quickly scan and compare tasks across columns.
+  </Tab>
+  <Tab title="Calendar">
+    Tasks with a `startDate` or `dueDate` are plotted on a calendar. Use this view to identify scheduling conflicts and ensure work is distributed evenly across the timeline.
+  </Tab>
+  <Tab title="Gantt">
+    Tasks with both a `startDate` and `dueDate` are rendered as horizontal bars on a timeline. Use this view to see task duration and overlap at a glance.
+  </Tab>
+</Tabs>
+
+## Task cards
+
+Each Kanban task card displays:
+
+- **Priority badge** — color-coded label: red for `URGENT`, orange for `HIGH`, blue for `MEDIUM`, and grey for `LOW`.
+- **Title** — the task name in bold.
+- **Date range** — if both `startDate` and `dueDate` are set, both dates are shown as a range (e.g., `5 Apr → 12 Apr`). If only one date is set, it is shown alone.
+- **Assignee avatar** — the profile picture or initials of the assigned member. A dashed circle indicates the task is unassigned.
+Cards are draggable by project members with the **LEADER** or **STUDENT** role. A left-side colored border reflects the task priority.
+
+## Filtering tasks
+
+The board toolbar provides three filters that apply across all views:
+
+| Filter | Behavior |
+|---|---|
+| Search | Matches against task title (case-insensitive). |
+| Assignee | Filters to tasks assigned to the selected project member. |
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Boards and tasks overview" icon="layout-panel-left" href="/tasks/boards">
+    Reference for all board and task fields and GraphQL mutations.
+  </Card>
+  <Card title="Scrum" icon="rotate" href="/tasks/scrum">
+    Sprint-based project management with planning and burndown charts.
+  </Card>
+</CardGroup>

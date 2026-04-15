@@ -1,0 +1,92 @@
+---
+title: "Your PROJEIC profile and account settings"
+description: "View and understand your user profile in PROJEIC — including your name, email, avatar, role, and how authentication state is managed across the app."
+---
+
+The profile page at `/misc/profile` is your personal dashboard in PROJEIC. It shows your account information, a summary of your active projects, pending tasks, weekly activity points, and a real-time feed of recent actions across your projects. Your profile data is fetched from the API on page load and combined with local authentication state to give you a full picture of your activity on the platform.
+
+## Profile fields
+
+Your PROJEIC profile is returned by the `me` query and contains the following fields:
+
+| Field       | Type      | Description                                                          |
+| ----------- | --------- | -------------------------------------------------------------------- |
+| `userId`    | `string`  | Unique identifier for your account.                                  |
+| `email`     | `string`  | Your institutional email address.                                    |
+| `name`      | `string`  | Your full display name.                                              |
+| `avatarUrl` | `string?` | URL to your profile picture. Optional — falls back to a generated avatar. |
+| `isAdmin`   | `boolean?`| Whether your account has platform-wide administrator permissions.    |
+
+## Fetching your profile
+
+Use the `me` query to retrieve your profile from the API. This query requires a valid authenticated session.
+
+<CodeGroup>
+
+```graphql me query
+query Me {
+  me {
+    userId
+    email
+    name
+    avatarUrl
+    isAdmin
+  }
+}
+```
+
+```typescript useAuth hook
+import { useAuth } from '@/context/AuthProvider';
+
+export default function MyComponent() {
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
+
+  if (isLoading) return <p>Loading...</p>;
+  if (!isAuthenticated) return <p>Not logged in.</p>;
+
+  return (
+    <div>
+      <p>{user?.name}</p>
+      <p>{user?.email}</p>
+    </div>
+  );
+}
+```
+
+</CodeGroup>
+
+## The `useAuth` hook
+
+`useAuth` gives any component access to the current authentication state without making an API call. It reads from the values stored in `localStorage` when the session was established.
+
+```typescript
+const { user, isAuthenticated, isLoading, logout } = useAuth();
+```
+
+| Return value      | Type           | Description                                                          |
+| ----------------- | -------------- | -------------------------------------------------------------------- |
+| `user`            | `User \| null` | The authenticated user object, or `null` if not logged in.           |
+| `isAuthenticated` | `boolean`      | `true` when a valid user and access token are present.               |
+| `isLoading`       | `boolean`      | Always `false` in the current implementation — retained for API compatibility. |
+| `logout`          | `() => void`   | Clears session data from `localStorage` and redirects to `/`.        |
+
+<Note>
+  `useAuth` must be called inside a component that is a descendant of `AuthProvider`. Calling it outside this context throws an error.
+</Note>
+
+The hook reads two keys from `localStorage` to determine authentication state:
+
+- `projeic_accessToken` — the JWT used to authenticate API requests.
+- `projeic_user` — a JSON-serialised copy of the `User` object.
+
+## Avatars
+
+If your account has an `avatarUrl`, PROJEIC displays it as your profile picture. If `avatarUrl` is absent or empty, the platform falls back to a generated avatar from `https://ui-avatars.com/api/?name=` using your display name. In the configuration page, a letter-based placeholder using the first character of your name is shown as an additional fallback when no image is available.
+
+## Administrator role
+
+When `isAdmin` is `true`, your account has elevated permissions that apply across the entire platform — not just within individual projects. Administrators can access platform-wide statistics, manage users, and perform actions that are unavailable to regular members. The `isAdmin` flag is set server-side and cannot be changed from the profile interface.
+
+<Warning>
+  Administrator permissions grant platform-wide access. Contact your institution's PROJEIC administrator if you believe your role is incorrect.
+</Warning>

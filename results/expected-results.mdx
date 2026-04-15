@@ -1,0 +1,201 @@
+---
+title: "Expected results: track deliverables and evidence"
+description: "Define project deliverables in PROJEIC, track their progress through validated statuses, and attach file evidence via secure presigned URL uploads."
+---
+
+Expected results are the formal deliverables that a project must produce to be considered complete. In PROJEIC, each expected result has an owner, a lifecycle of statuses that maps to a progress percentage, and a dedicated evidence store — giving supervisors a clear, auditable record of what was delivered and when.
+
+## Fields
+
+Each expected result exposes the following fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `String` | Unique identifier for the result |
+| `projectId` | `String` | The project this result belongs to |
+| `title` | `String` | Short name for the deliverable |
+| `description` | `String` | Acceptance criteria or scope definition |
+| `status` | `Enum` | Current lifecycle status (see table below) |
+| `progress` | `Int` | Percentage derived from `status` |
+| `createdAt` | `DateTime` | Creation timestamp |
+| `owner` | `Object` | The member responsible (`userId`, `name`, `avatarUrl`) |
+| `evidences` | `Array` | Attached files (`id`, `type`, `url`, `fileKey`, `createdAt`) |
+| `history` | `Array` | Audit trail of status changes |
+| `tasks` | `Array` | Board tasks linked to this result (`id`, `title`, `status`) |
+
+### Status values and progress
+
+| Status | Label | Progress |
+|---|---|---|
+| `NOT_STARTED` | Sin avance | 0% |
+| `STARTED` | En Progreso | 10% |
+| `IN_REVIEW` | En Revisión | 50% |
+| `VALIDATED` | Testeado | 80% |
+| `COMPLETED` | Completado Real | 100% |
+
+## Queries and mutations
+
+### Fetch expected results for a project
+
+```graphql
+query GetExpectedResults($projectId: String!) {
+  expectedResultsByProject(projectId: $projectId) {
+    id
+    projectId
+    title
+    description
+    status
+    progress
+    createdAt
+    owner {
+      userId
+      name
+      avatarUrl
+    }
+    evidences {
+      id
+      type
+      url
+      fileKey
+      createdAt
+    }
+    history {
+      id
+      previousStatus
+      newStatus
+      reason
+      createdAt
+    }
+    tasks {
+      id
+      title
+      status
+    }
+  }
+}
+```
+
+### Create an expected result
+
+```graphql
+mutation CreateExpectedResult($input: CreateExpectedResultInput!) {
+  createExpectedResult(input: $input) {
+    id
+    title
+    status
+  }
+}
+```
+
+### Update result status
+
+```graphql
+mutation UpdateResultStatus($input: UpdateResultStatusInput!) {
+  updateResultStatus(input: $input) {
+    id
+    status
+    progress
+  }
+}
+```
+
+Pass `reason` in the input to add a note to the status history entry:
+
+```typescript
+const input = {
+  id: "result-id",
+  status: "VALIDATED",
+  reason: "Approved after peer review on 2025-06-10"
+};
+```
+
+### Get a presigned upload URL
+
+```graphql
+mutation GetUploadPresignedUrl($fileName: String!, $contentType: String!) {
+  getUploadPresignedUrl(fileName: $fileName, contentType: $contentType) {
+    uploadUrl
+    fileKey
+  }
+}
+```
+
+## Uploading evidence
+
+Evidence files are uploaded directly to cloud storage using a presigned URL. PROJEIC generates a short-lived upload URL on the server — your client never needs storage credentials.
+
+<Steps>
+  <Step title="Create the expected result">
+    Call `createExpectedResult` with a title, description, and owner. The result starts with status `NOT_STARTED` and 0% progress.
+  </Step>
+  <Step title="Request a presigned upload URL">
+    Call `getUploadPresignedUrl` with the file name and MIME type. The server returns an `uploadUrl` and a `fileKey`.
+
+    ```typescript
+    const { uploadUrl, fileKey } = await fetchGraphQL({
+      query: GET_UPLOAD_PRESIGNED_URL,
+      variables: { fileName: "report.pdf", contentType: "application/pdf" }
+    });
+    ```
+  </Step>
+  <Step title="Upload the file directly to storage">
+    Use a plain HTTP `PUT` request to the `uploadUrl`. No authorization header is required — the URL is already signed.
+
+    ```typescript
+    await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "application/pdf" },
+      body: file
+    });
+    ```
+  </Step>
+  <Step title="Update the result status">
+    Call `updateResultStatus` to advance the lifecycle and record the change in the history. The `fileKey` is stored automatically as evidence when you submit the status update.
+  </Step>
+</Steps>
+
+<Note>
+  Evidence entries are stored with a `type` (e.g. `FILE`), a permanent `url`, and the `fileKey` used to reference the object in cloud storage. Presigned upload URLs are short-lived and should be used immediately after they are issued.
+</Note>
+
+## Status history and audit trail
+
+Every call to `updateResultStatus` creates an immutable history entry. You can query the full trail via the `history` array on each result:
+
+```graphql
+history {
+  id
+  previousStatus
+  newStatus
+  reason
+  createdAt
+}
+```
+
+This gives supervisors a timestamped record of every lifecycle transition, who requested it, and the reason provided — useful for academic reviews and project audits.
+
+<AccordionGroup>
+  <Accordion title="What happens when I change the status?">
+    When you call `updateResultStatus`, PROJEIC does three things atomically:
+
+    1. **Updates the status field** on the expected result to the new value.
+    2. **Recalculates progress** — each status maps to a fixed percentage (see the status table above). Progress is derived from status, not set manually.
+    3. **Appends a history entry** recording the previous status, the new status, the optional reason string, and the timestamp. This entry cannot be edited or deleted.
+
+    If you need to roll back a status change, you can call `updateResultStatus` again with the previous status value. Both the forward and reverse transitions will appear in the history.
+  </Accordion>
+</AccordionGroup>
+
+## Linking tasks to expected results
+
+Board tasks in PROJEIC can reference an `expectedResultId`. The `tasks` field on an expected result returns all tasks currently linked to it, giving you a direct view of the day-to-day work that contributes to each deliverable.
+
+```graphql
+tasks {
+  id
+  title
+  status
+}
+```
+
+Use this to check whether all supporting tasks are completed before advancing the expected result to `VALIDATED` or `COMPLETED`. If any linked task is still open, it signals that the deliverable may not be ready to progress.

@@ -1,0 +1,115 @@
+---
+title: "Project methodologies: Kanban, Scrum, Scrumban"
+description: "Understand the three agile methodologies available in PROJEIC Classic mode and how each one shapes boards, sprints, and task flow."
+---
+
+When you create or edit a project in Classic mode, you choose a methodology that determines how work is organized and tracked. The methodology controls which board views, sprint features, and metrics are available to your team. PROJEIC supports three options: Kanban, Scrum, and Scrumban.
+
+<Note>
+  In the current release, **Kanban** is fully available when creating a new project. **Scrum** and **Scrumban** are listed in the creation form as "coming soon" — full board and sprint UI for these methodologies is in active development. The underlying GraphQL operations for sprints, boards, and tasks are available and functional for all three methodology types.
+</Note>
+
+<Note>
+Methodology only applies to projects running in **Classic mode**. Projects in PROJEIC Native (Hybrid) mode use outcome-based tracking through Expected Results and set methodology to `NONE` internally — no board or sprint methodology applies.
+</Note>
+
+<Tabs>
+  <Tab title="Kanban">
+    Kanban is a continuous-flow methodology built around a visual board of columns. Work moves from left to right as tasks progress through your custom stages.
+
+    **Key characteristics:**
+
+    - Configurable columns with optional WIP (Work In Progress) limits per column
+    - No sprints — work flows continuously without time-boxed iterations
+    - New tasks can be added at any time without waiting for a sprint boundary
+    - Progress is measured by throughput and cycle time rather than sprint velocity
+
+    **When to use Kanban:**
+
+    - Ongoing maintenance or support projects
+    - Research projects where scope evolves continuously
+    - Small teams that don't need sprint planning overhead
+    - Projects where task arrival is unpredictable
+
+    **Board view:** A single board with your configured columns. Each column can have a WIP limit that flags when the column is overloaded.
+  </Tab>
+
+  <Tab title="Scrum">
+    Scrum is a sprint-based methodology that organizes work into fixed time-boxed iterations. The team commits to a set of tasks at the start of each sprint and delivers at the end.
+
+    **Key characteristics:**
+
+    - Work is organized into sprints with a defined start date, end date, and goal
+    - Sprint planning selects tasks from the backlog into the active sprint
+    - Burndown charts track remaining work versus elapsed sprint time
+    - Sprints have a sprint timeline view showing progress across the iteration
+
+    **When to use Scrum:**
+
+    - Academic semester projects with fixed delivery dates
+    - Projects with well-defined scope that can be broken into iterations
+    - Teams that benefit from regular cadence and structured planning ceremonies
+    - Projects where stakeholders expect predictable delivery checkpoints
+
+    **Board view:** A sprint board showing only tasks in the active sprint, plus a backlog view for tasks not yet assigned to a sprint.
+  </Tab>
+
+  <Tab title="Scrumban">
+    Scrumban is a hybrid methodology that combines Kanban's continuous-flow board with Scrum's sprint cadence. Teams get the flexibility of Kanban with the structure of regular sprint planning.
+
+    **Key characteristics:**
+
+    - Kanban-style columns with WIP limits for continuous flow
+    - Sprint cadence for periodic planning and review ceremonies
+    - Tasks can be pulled into the board at any time (Kanban) while the team still reviews progress at sprint boundaries (Scrum)
+    - Useful transition methodology for teams moving from Kanban toward more structured delivery
+
+    **When to use Scrumban:**
+
+    - Teams that found pure Scrum too rigid but need more structure than Kanban provides
+    - Projects that have both predictable planned work and unpredictable incoming requests
+    - Teams new to agile that are iterating on their process
+
+    **Board view:** Kanban-style board with WIP limits, plus sprint boundary markers for review cadence.
+  </Tab>
+</Tabs>
+
+## Methodology comparison
+
+| Feature | Kanban | Scrum | Scrumban |
+|---|---|---|---|
+| Sprints | No | Yes | Optional cadence |
+| Backlog management | Continuous | Sprint-bounded | Continuous |
+| WIP limits | Yes | No | Yes |
+| Burndown charts | No | Yes | Partial |
+| Sprint planning | No | Yes | Periodic |
+| Board type | Column flow | Sprint board + backlog | Column flow |
+| Best for | Ongoing work | Fixed iterations | Hybrid workflows |
+| Delivery rhythm | Continuous | End of sprint | Continuous |
+
+## Choosing a methodology
+
+<Tip>
+For most EIC semester projects with a fixed submission date, **Scrum** aligns well because it maps naturally to the academic calendar — each sprint can correspond to a week or two of coursework, with sprint reviews matching professor check-ins. Choose **Kanban** if your project is open-ended or if the team is small and adding ceremony overhead isn't worthwhile. Use **Scrumban** if your team already works in Kanban but wants to introduce regular retrospectives without fully committing to Scrum.
+</Tip>
+
+You can change the methodology of an existing project at any time via `UpdateProjectInput`. However, changing from Scrum to Kanban will remove sprint-specific views from the board, and in-progress sprints should be closed before switching to avoid data inconsistency.
+
+```graphql
+mutation UpdateProject($input: UpdateProjectInput!) {
+  updateProject(input: $input) {
+    id
+    methodology
+    mode
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "id": "your-project-id",
+    "methodology": "SCRUM"
+  }
+}
+```

@@ -1,0 +1,129 @@
+---
+title: "Project metrics and health indicators"
+description: "Query project metrics in PROJEIC to get task completion rates, overdue counts, per-column distribution, and a health indicator based on overdue tasks."
+---
+
+PROJEIC computes a set of project metrics on demand, giving project leads, students, and supervisors a quantitative snapshot of where a project stands. Metrics cover task completion, overdue work, board distribution, and team activity — and they feed the health indicator shown at the top of every project's **Metrics** tab.
+
+## Metrics fields
+
+The `projectMetrics` query returns a single object with the following fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `totalTasks` | `Int` | Total number of tasks across all boards in the project |
+| `completedTasks` | `Int` | Tasks whose status is `COMPLETED` |
+| `overdueTasksCount` | `Int` | Tasks that have passed their `dueDate` without being completed |
+| `inReviewTasks` | `Int` | Tasks currently in a review column or review status |
+| `activityLast7Days` | `Int` | Aggregate activity score for the project over the past 7 days |
+| `tasksByColumn` | `Array` | Per-column task counts with board ID, column name, count, and color |
+| `overdueTasksList` | `Array` | Full list of overdue tasks with ID, title, due date, and current status |
+
+### `tasksByColumn` entries
+
+```typescript
+{
+  boardId: string;  // ID of the board that owns this column
+  name: string;     // Column display name (e.g. "In Progress")
+  count: number;    // Number of tasks currently in this column
+  color: string;    // Hex color associated with the column
+}
+```
+
+### `overdueTasksList` entries
+
+```typescript
+{
+  id: string;
+  title: string;
+  dueDate: string;  // ISO 8601 timestamp
+  status: string;   // Current status at the time of the query
+}
+```
+
+## Fetching project metrics
+
+```graphql
+query GetProjectMetrics($projectId: String!) {
+  projectMetrics(projectId: $projectId) {
+    totalTasks
+    completedTasks
+    overdueTasksCount
+    inReviewTasks
+    activityLast7Days
+    tasksByColumn {
+      boardId
+      name
+      count
+      color
+    }
+    overdueTasksList {
+      id
+      title
+      dueDate
+      status
+    }
+  }
+}
+```
+
+Pass the project's string ID as `projectId`. The query requires authentication and membership in the project.
+
+## Health indicator
+
+The health indicator in the **Metrics** tab combines `completedTasks`, `totalTasks`, and `overdueTasksCount` into a single visual signal:
+
+| Condition | Indicator | Meaning |
+|---|---|---|
+| No overdue tasks | Green | Project is on track |
+| One or more overdue tasks | Red | Project has tasks past their deadline |
+
+The circular progress dial shows `completedTasks / totalTasks × 100`. This percentage is calculated client-side from the raw metrics data:
+
+```typescript
+const progressPercentage = metrics.totalTasks > 0
+  ? Math.round((metrics.completedTasks / metrics.totalTasks) * 100)
+  : 0;
+
+const hasOverdue = metrics.overdueTasksCount > 0;
+// green (#22c55e) when no overdue, red (#ef4444) when overdue
+```
+
+<Info>
+  Metrics are computed at query time — they are not cached or precomputed. Every call to `projectMetrics` reflects the current state of tasks, boards, and due dates in the project. Refresh the tab to get up-to-date numbers.
+</Info>
+
+## Dashboard activity
+
+In addition to per-project metrics, the dashboard exposes a personal activity feed through `GET_DASHBOARD_ACTIVITY`. This query returns two values:
+
+```graphql
+query GetDashboardActivity {
+  myWeeklyActivityPoints
+  myRecentFeed {
+    id
+    action
+    entity
+    createdAt
+    meta
+    user {
+      name
+      avatarUrl
+    }
+    project {
+      name
+    }
+  }
+}
+```
+
+| Field | Description |
+|---|---|
+| `myWeeklyActivityPoints` | A numeric score representing the authenticated user's activity across all projects in the past 7 days |
+| `myRecentFeed` | A chronological list of recent actions by the user and their teammates, across all projects |
+
+Each feed item includes the action type, the entity affected, a `meta` JSON payload with action-specific detail, and the project it belongs to.
+
+<Tip>
+  Use `activityLast7Days` on the project and `myWeeklyActivityPoints` on the dashboard together to spot disengagement early. A project with low `activityLast7Days` and no recent commits in `myRecentFeed` is a signal worth raising with the team before it becomes a deadline problem.
+</Tip>

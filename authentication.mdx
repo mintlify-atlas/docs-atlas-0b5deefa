@@ -1,0 +1,143 @@
+---
+title: "Authenticate with PROJEIC: JWT tokens and sessions"
+description: "PROJEIC uses JWT-based authentication. Learn how tokens are issued, stored in localStorage, attached to requests, and cleared on logout."
+---
+
+PROJEIC authenticates users with JSON Web Tokens (JWT). When you log in or register, the GraphQL API returns an `accessToken` along with a `user` object. Both are persisted in `localStorage` so they survive page refreshes. Every subsequent API request attaches the token as a `Bearer` header so the server can identify and authorize you.
+
+<Warning>
+  PROJEIC stores your access token in `localStorage` under the key `projeic_accessToken`. This means the token is accessible to any JavaScript running on the same origin. Use PROJEIC only on trusted devices and networks, and log out when you are done with a shared machine.
+</Warning>
+
+## Register and log in
+
+Both registration and login are GraphQL mutations sent to the same endpoint. The response is identical: an `accessToken` and a `user` object containing `id`, `email`, and `name`.
+
+<CodeGroup>
+
+```graphql Login mutation
+mutation Login($email: String!, $password: String!) {
+  login(email: $email, password: $password) {
+    accessToken
+    user {
+      id
+      email
+      name
+    }
+  }
+}
+```
+
+```graphql Register mutation
+mutation Register($name: String!, $email: String!, $password: String!) {
+  register(name: $name, email: $email, password: $password) {
+    accessToken
+    user {
+      id
+      email
+      name
+    }
+  }
+}
+```
+
+</CodeGroup>
+
+Send these mutations as a `POST` request to the GraphQL endpoint:
+
+```
+POST /projeic/api/graphql
+Content-Type: application/json
+```
+
+The base URL is resolved from the `NEXT_PUBLIC_BACKEND_URL` environment variable. If the variable is not set, the client falls back to `http://localhost:4000`.
+
+## How tokens are stored
+
+After a successful login or registration, the frontend writes two items to `localStorage`:
+
+| Key | Value |
+|---|---|
+| `projeic_accessToken` | The raw JWT string returned by the API |
+| `projeic_user` | A JSON-serialized object with `userId`, `email`, `name`, `avatarUrl`, and `isAdmin` |
+
+When the page loads, `AuthProvider` reads both keys from `localStorage` and restores the session without a network request.
+
+## Sending authenticated requests
+
+Every call through `fetchGraphQL` automatically attaches the stored token as an `Authorization` header when one is present:
+
+<CodeGroup>
+
+```typescript fetchGraphQL (src/lib/graphQLClient.ts)
+const token = localStorage.getItem('projeic_accessToken') || '';
+
+const headers: Record<string, string> = {
+  'Content-Type': 'application/json',
+};
+
+if (token) {
+  headers['Authorization'] = `Bearer ${token}`;
+}
+
+const response = await fetch(`${backendUrl}/projeic/api/graphql`, {
+  method: 'POST',
+  headers,
+  body: JSON.stringify({ query, variables }),
+});
+```
+
+```bash cURL example
+curl --request POST \
+  --url https://<your-backend>/projeic/api/graphql \
+  --header 'Authorization: Bearer <your-access-token>' \
+  --header 'Content-Type: application/json' \
+  --data '{"query":"query Me { me { userId email name } }"}'
+```
+
+</CodeGroup>
+
+## Session management
+
+PROJEIC sessions are managed entirely on the client side through the `AuthProvider` component and the `useAuth` hook.
+
+### The `useAuth` hook
+
+Import `useAuth` in any client component to access the current session:
+
+```typescript
+import { useAuth } from '@/context/AuthProvider';
+
+const { user, isAuthenticated, isLoading, logout } = useAuth();
+```
+
+| Property | Type | Description |
+|---|---|---|
+| `user` | `User \| null` | The authenticated user, or `null` if not logged in |
+| `isAuthenticated` | `boolean` | `true` when a valid user and token are present in `localStorage` |
+| `isLoading` | `boolean` | Always `false` in the current implementation (no async restore) |
+| `logout` | `() => void` | Clears tokens and redirects to `/` |
+
+### Logout
+
+Calling `logout()` removes both `localStorage` keys and redirects the browser to the home page:
+
+```typescript
+// What logout() does internally
+localStorage.removeItem('projeic_accessToken');
+localStorage.removeItem('projeic_user');
+router.push('/');
+```
+
+There is no server-side token invalidation in the current implementation. The token is simply discarded from the client.
+
+## Route groups
+
+PROJEIC uses two Next.js route groups to separate public and protected pages:
+
+| Route group | Path pattern | Access |
+|---|---|---|
+| `(unlogged)` | `/`, `/auth/login`, `/proyectos`, `/acerca`, `/eic` | No authentication required |
+| `(logged)` | `/misc/profile`, `/misc/proyectos`, `/misc/notificaciones`, `/misc/configuracion` | Requires a valid session |
+
+Unauthenticated users who reach a protected route are redirected to `/auth/login`.

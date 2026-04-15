@@ -1,0 +1,122 @@
+---
+title: "Deploy PROJEIC frontend with Docker"
+description: "Build and run the PROJEIC Frontend as a self-contained Docker image using the included multi-stage Dockerfile and Next.js standalone output."
+---
+
+The PROJEIC Frontend ships with a production-ready Dockerfile that produces a minimal image using Next.js standalone output mode. The multi-stage build keeps the final image lean by discarding build-time dependencies — only the compiled application and its static assets are included in the runner stage.
+
+## Dockerfile
+
+The repository includes the following Dockerfile:
+
+```dockerfile
+FROM node:22-alpine AS base
+
+FROM base AS deps
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build
+
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+### Build stages
+
+| Stage     | Base image       | Purpose                                              |
+|-----------|------------------|------------------------------------------------------|
+| `base`    | `node:22-alpine` | Shared Alpine base for all stages                    |
+| `deps`    | `base`           | Installs exact dependencies from lockfile via `npm ci` |
+| `builder` | `base`           | Copies `node_modules` from `deps`, runs `npm run build` |
+| `runner`  | `base`           | Production image — copies standalone output only, exposes port 3000 |
+
+<Note>
+The `runner` stage works because `next.config.ts` sets `output: "standalone"`. This instructs Next.js to emit a self-contained `server.js` along with all required Node.js modules under `.next/standalone`, so no `node_modules` folder is needed in production.
+</Note>
+
+The `.dockerignore` file prevents `node_modules`, `.next`, `.git`, and `.env*.local` files from being sent to the build context, keeping builds fast and secrets out of the image.
+
+## Deploy with Docker
+
+<Steps>
+  <Step title="Build the image">
+    Run the following command from the repository root. The `-t` flag tags the image for easy reference.
+
+    ```bash
+    docker build -t projeic-frontend .
+    ```
+
+    The build will pull `node:22-alpine`, install dependencies, compile the Next.js application, and assemble the minimal runner image. Expect the first build to take 2–5 minutes depending on your machine.
+  </Step>
+
+  <Step title="Run the container">
+    Start the container and pass your backend URL as an environment variable. The `-p` flag maps the container's port 3000 to your host.
+
+    <CodeGroup>
+      ```bash Minimal
+      docker run -p 3000:3000 \
+        -e NEXT_PUBLIC_BACKEND_URL=https://your-backend.example.com \
+        projeic-frontend
+      ```
+
+      ```bash Detached
+      docker run -d -p 3000:3000 \
+        --name projeic-frontend \
+        -e NEXT_PUBLIC_BACKEND_URL=https://your-backend.example.com \
+        projeic-frontend
+      ```
+
+      ```bash With env file
+      docker run -p 3000:3000 \
+        --env-file .env.production \
+        projeic-frontend
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Verify the deployment">
+    Open your browser or use `curl` to confirm the application is responding:
+
+    ```bash
+    curl -I http://localhost:3000/projeic
+    ```
+
+    You should receive an HTTP `200` response. The app is served under the `/projeic` base path as configured in `next.config.ts`.
+  </Step>
+</Steps>
+
+## Environment variables at runtime
+
+Because `NEXT_PUBLIC_BACKEND_URL` is inlined at **build time** by Next.js, the value must be available when you run `docker build`, not just `docker run`. Pass it as a build argument if you need different values per environment:
+
+<CodeGroup>
+  ```bash Build-time injection
+  docker build \
+    --build-arg NEXT_PUBLIC_BACKEND_URL=https://your-backend.example.com \
+    -t projeic-frontend .
+  ```
+
+  ```dockerfile Dockerfile (add ARG)
+  FROM base AS builder
+  WORKDIR /app
+  ARG NEXT_PUBLIC_BACKEND_URL
+  ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
+  COPY --from=deps /app/node_modules ./node_modules
+  COPY . .
+  RUN npm run build
+  ```
+</CodeGroup>
+
+Alternatively, rely on the built-in [auto-detection fallback](/deployment/environment-variables#auto-detection-fallback-logic) when deploying to Railway, where no build argument is needed.

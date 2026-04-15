@@ -1,0 +1,80 @@
+---
+title: "Configure your PROJEIC account preferences"
+description: "Manage display preferences, notification settings, and session options from your PROJEIC account configuration page at /misc/configuracion."
+---
+
+The configuration page at `/misc/configuracion` is your central place to manage account-level preferences in PROJEIC. From here you can review your profile summary, adjust notification preferences, manage your session, and understand the available display settings. Changes you make to display preferences such as theme are stored locally in your browser — they apply only to the device and browser you are currently using.
+
+<Note>
+  Theme and display settings are saved in your browser's `localStorage`. They are not synced across devices or stored on the server.
+</Note>
+
+## Profile summary
+
+The **Perfil** section at the top of the configuration page displays your current account information as a read-only summary:
+
+- Your avatar (or a letter-based placeholder if no avatar is set)
+- Your full name
+- Your institutional email address
+
+Your profile data is synced automatically with your UCN account. You cannot edit your name or email directly within PROJEIC.
+
+## Theme settings
+
+PROJEIC supports light and dark display modes. The `useTheme` hook manages theme state and provides a toggle function you can call from any component.
+
+```typescript
+import { useTheme } from '@/hooks/useTheme';
+
+export default function ThemeToggle() {
+  const { isDark, toggle } = useTheme();
+
+  return (
+    <button onClick={toggle}>
+      {isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+    </button>
+  );
+}
+```
+
+| Return value | Type         | Description                                                             |
+| ------------ | ------------ | ----------------------------------------------------------------------- |
+| `isDark`     | `boolean`    | `true` when dark mode is active.                                        |
+| `toggle`     | `() => void` | Switches between light and dark mode and persists the choice.           |
+
+### How theme preference is resolved
+
+When the page loads, `useTheme` checks for an existing preference in `localStorage` under the key `theme`. If no preference is stored, it falls back to your operating system's `prefers-color-scheme` setting. The resolved value is applied immediately by toggling the `dark` class on the `<html>` element.
+
+When you call `toggle`, the new value (`'dark'` or `'light'`) is written back to `localStorage` so your preference persists across page reloads.
+
+## Notification preferences
+
+The **Preferencias de notificaciones** section lets you enable or disable specific notification types using toggle switches:
+
+| Preference                        | Description                                             |
+| --------------------------------- | ------------------------------------------------------- |
+| Notificaciones por email          | Receive notification emails to your institutional address. |
+| Alertas de tareas vencidas        | Get alerted when tasks assigned to you are overdue.     |
+| Resumen semanal de actividad      | Receive a weekly digest of activity across your projects. |
+
+## Session management
+
+The **Sesión** section provides a button to sign out of PROJEIC. Clicking **Cerrar sesión** calls the `logout` function from the `useAuth` hook, which removes your access token and user data from `localStorage` and redirects you to the login page.
+
+```typescript
+import { useAuth } from '@/context/AuthProvider';
+
+const { logout } = useAuth();
+
+// Clears projeic_accessToken and projeic_user from localStorage
+logout();
+```
+
+## Danger zone
+
+The configuration page includes a **Zona de peligro** section with the option to permanently delete your account. This action would erase all your data and cannot be undone.
+
+<Warning>
+  Account deletion is not yet enabled. The button is visible but disabled. This feature will be available in a future release.
+</Warning>

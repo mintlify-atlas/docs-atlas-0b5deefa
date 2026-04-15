@@ -1,80 +1,68 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: "Get started with PROJEIC: account, project, and tasks"
+description: "Create your PROJEIC account, configure your first project with a methodology and visibility setting, add team members, and assign your first task."
 ---
 
-## Get started in three steps
+This guide walks you through everything you need to go from a new account to an active project with team members and tasks. By the end, you will have a working board ready for your team to use.
 
-Get your documentation site running locally and make your first customization.
+<Tip>
+  Choose your methodology before creating a project. **Kanban** works best for continuous workflows with no fixed delivery dates. **Scrum** suits teams that want structured sprints with defined start and end dates. **Scrumban** is a hybrid that combines sprint planning with flexible Kanban-style columns.
+</Tip>
 
-### Step 1: Set up your local environment
+<Steps>
+  <Step title="Register or log in">
+    Go to `/auth/login` in your browser. If you already have an account, enter your email and password and click **Log in**. If you are new to PROJEIC, click the **Register** tab, fill in your name, email, and password, then submit the form.
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    After a successful login or registration, PROJEIC stores your access token and user data in your browser's `localStorage` and redirects you to the dashboard.
+  </Step>
 
-### Step 2: Deploy your changes
+  <Step title="Create your first project">
+    From the dashboard, click **New Project**. Fill in the following fields:
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    | Field | Description |
+    |---|---|
+    | Name | A short, descriptive project title |
+    | Description | What the project is about and its goals |
+    | Methodology | `KANBAN`, `SCRUM`, or `SCRUMBAN` |
+    | Visibility | `Public` (visible without login) or `Private` |
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    Click **Create** to save. Your project is now active and ready for team members.
+  </Step>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+  <Step title="Add team members">
+    Open your project and go to the **Members** tab. Click **Invite member**, enter the person's email address, and choose their role:
 
-### Step 3: Go live
+    - **Admin** — full project control, including settings and member management
+    - **Supervisor** — can review tasks and results but cannot change project settings
+    - **Student** — can create and update tasks assigned to them
+    - **External** — read-only access for stakeholders outside the EIC
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    The invited person receives a notification and can accept the invitation from their notifications panel.
+  </Step>
 
-## Next steps
+  <Step title="Set up your board">
+    How you set up your board depends on the methodology you chose:
 
-Now that you have your docs running, explore these key features:
+    **Kanban** — go to the **Board** tab and click **Add column**. Create columns that represent the stages of your workflow, such as `To do`, `In progress`, and `Done`.
 
-<CardGroup cols={2}>
+    **Scrum** — go to the **Sprints** tab and click **New sprint**. Set a name, start date, and end date for your first sprint. Tasks added to the sprint appear on the sprint board.
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+    **Scrumban** — create columns like Kanban, then assign tasks to sprints for planning purposes.
+  </Step>
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+  <Step title="Add your first task">
+    Inside your board or sprint, click **Add task** (or the `+` button in a column). Fill in:
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
+    - **Title** — a concise description of the work
+    - **Description** — additional context or acceptance criteria
+    - **Priority** — `Low`, `Medium`, `High`, or `Critical`
+    - **Assignee** — a team member from your project
+    - **Due date** — the date the task should be completed
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+    Save the task. It appears in your board column and is visible to all project members.
+  </Step>
+</Steps>
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  Projects set to **Public** visibility are accessible at `/proyectos` without any login. Anyone can view the project details, members, and progress — useful for sharing work with the wider EIC community or external reviewers.
 </Note>

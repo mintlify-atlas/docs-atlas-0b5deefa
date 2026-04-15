@@ -1,0 +1,73 @@
+---
+title: "Deploy PROJEIC frontend to Railway"
+description: "Deploy PROJEIC Frontend to Railway using the included railway.toml with Nixpacks. Connect your repo, set NEXT_PUBLIC_BACKEND_URL, and push to deploy."
+---
+
+Railway is the primary cloud target for PROJEIC deployments. The repository ships with a `railway.toml` file that tells Railway how to build the frontend, so no manual configuration is required in the Railway dashboard beyond setting your environment variables.
+
+## railway.toml
+
+The `railway.toml` at the project root contains:
+
+```toml
+[build]
+builder = "NIXPACKS"
+```
+
+This single directive instructs Railway to use [Nixpacks](https://nixpacks.com) as the build system instead of Docker. Nixpacks detects that the project is a Next.js application, installs dependencies with `npm ci`, and runs `npm run build` automatically — mirroring what the Dockerfile does, but without requiring you to maintain a separate build pipeline on Railway.
+
+<Note>
+The PROJEIC backend must be deployed and reachable before the frontend is deployed. The frontend makes GraphQL requests to the backend at runtime; if the backend URL is wrong or the service is down, the UI will fail to load data.
+</Note>
+
+## Deploy to Railway
+
+<Steps>
+  <Step title="Connect your GitHub repository">
+    In the [Railway dashboard](https://railway.app), create a new project and select **Deploy from GitHub repo**. Choose the `PROJEIC_Frontend` repository. Railway will detect `railway.toml` and use Nixpacks automatically.
+  </Step>
+
+  <Step title="Set environment variables">
+    Before triggering a deploy, go to your service's **Variables** tab in the Railway dashboard and add:
+
+    | Variable                  | Value                                      |
+    |---------------------------|--------------------------------------------|
+    | `NEXT_PUBLIC_BACKEND_URL` | URL of your deployed PROJEIC backend       |
+
+    For example:
+
+    ```env
+    NEXT_PUBLIC_BACKEND_URL=https://projeicbackend-production.up.railway.app
+    ```
+
+    See the [Environment variables](/deployment/environment-variables) page for a full description of this variable and the auto-detection fallback.
+  </Step>
+
+  <Step title="Deploy">
+    Trigger a deploy by pushing to your connected branch or clicking **Deploy** in the Railway dashboard. Railway will run the Nixpacks build, which executes:
+
+    ```bash
+    npm ci
+    npm run build
+    npm run start
+    ```
+
+    The service will be live once the health check passes.
+  </Step>
+</Steps>
+
+## Railway environment auto-detection
+
+When `NEXT_PUBLIC_BACKEND_URL` is **not** set, the frontend detects which Railway environment it is running in by inspecting `window.location.hostname` at runtime:
+
+| Frontend hostname pattern         | Backend URL resolved automatically                       |
+|-----------------------------------|----------------------------------------------------------|
+| `*.development.up.railway.app`    | `https://projeicbackend-development.up.railway.app`      |
+| `*.production.up.railway.app`     | `https://projeicbackend-production.up.railway.app`       |
+| Anything else                     | `http://localhost:4000`                                  |
+
+This means that if both the frontend and backend follow the Railway naming convention (`projeic-frontend` and `projeicbackend` services in the same environment), the connection works out of the box without any variables configured. Setting `NEXT_PUBLIC_BACKEND_URL` explicitly always takes precedence and is recommended for predictable production deployments.
+
+<Tip>
+Railway assigns an automatic HTTPS domain to every service (e.g. `projeic-frontend-production.up.railway.app`). You can also attach a custom domain from the **Settings → Networking** tab of your service, and Railway will provision a TLS certificate automatically.
+</Tip>

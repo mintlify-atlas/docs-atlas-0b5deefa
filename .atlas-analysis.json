@@ -1,0 +1,120 @@
+{
+  "projectType": "saas",
+  "projectName": "PROJEIC",
+  "projectDescription": "PROJEIC is a project management platform for the Escuela de Ingeniería Coquimbo (EIC), enabling students, professors, and administrators to create, track, and collaborate on academic and institutional engineering projects.",
+  "theme": "luma",
+  "primaryColor": "#7c7c7c",
+  "lightColor": "#080808",
+  "darkColor": "#c1c1c1",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Projects",
+            "pages": [
+              "projects/overview",
+              "projects/methodologies",
+              "projects/members-and-roles"
+            ]
+          },
+          {
+            "group": "Task Management",
+            "pages": [
+              "tasks/boards",
+              "tasks/kanban",
+              "tasks/scrum",
+              "tasks/scrumban"
+            ]
+          },
+          {
+            "group": "Results & Metrics",
+            "pages": [
+              "results/expected-results",
+              "results/metrics",
+              "results/activity-feed"
+            ]
+          },
+          {
+            "group": "User & Settings",
+            "pages": [
+              "user/profile",
+              "user/notifications",
+              "user/configuration"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Deployment",
+        "groups": [
+          {
+            "group": "Self-Hosting",
+            "pages": [
+              "deployment/environment-variables",
+              "deployment/docker",
+              "deployment/railway"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Multi-methodology project management: Kanban, Scrum, and Scrumban boards",
+    "Role-based access control with Admin, Supervisor, Student, and External roles",
+    "Sprint management with burndown charts and sprint planning",
+    "Expected results tracking with evidence uploads and progress history",
+    "Public project pages shareable with the university community without login",
+    "Real-time project metrics, health indicators, and activity feeds",
+    "Notifications system with team invitations and project updates",
+    "JWT-based authentication via GraphQL API",
+    "Institutional and curricular project classification with subject linking",
+    "Calendar and Gantt views for project scheduling"
+  ],
+  "publicApiSurface": [
+    "mutation Login($email, $password) -> accessToken + user",
+    "mutation Register($name, $email, $password) -> accessToken + user",
+    "query projects($filter: ProjectsFilterInput) -> PaginatedProjects",
+    "query project($id: ID!) -> Project",
+    "mutation createProject($input: CreateProjectInput!) -> Project",
+    "mutation updateProject($input: UpdateProjectInput!) -> Project",
+    "mutation archiveProject($id: ID!) -> Project",
+    "mutation deleteProject($id: ID!) -> Project",
+    "query tasksByProject($projectId, $sprintId) -> [Task]",
+    "query pendingTasksByUserId -> [Task]",
+    "mutation createTask($input: CreateTaskInput!) -> Task",
+    "mutation updateTask($input: UpdateTaskInput!) -> Task",
+    "mutation removeTask($id: String!) -> Task",
+    "query boardsByProject($projectId: String!) -> [Board]",
+    "mutation createBoard($input: CreateBoardInput!) -> Board",
+    "mutation updateBoard($input: UpdateBoardInput!) -> Board",
+    "mutation removeBoard($id: String!) -> Board",
+    "query sprintsByProject($projectId: String!) -> [Sprint]",
+    "mutation createSprint($input: CreateSprintInput!) -> Sprint",
+    "mutation startSprint($id, $projectId) -> Sprint",
+    "mutation completeSprint($id: String!) -> Sprint",
+    "query expectedResultsByProject($projectId: String!) -> [ExpectedResult]",
+    "mutation createExpectedResult($input: CreateExpectedResultInput!) -> ExpectedResult",
+    "mutation updateResultStatus($input: UpdateResultStatusInput!) -> ExpectedResult",
+    "mutation getUploadPresignedUrl($fileName, $contentType) -> { uploadUrl, fileKey }",
+    "query projectMetrics($projectId: String!) -> ProjectMetrics",
+    "query activityLogsByProject($projectId: String!) -> [ActivityLog]",
+    "query myNotifications($unreadOnly: Boolean) -> [Notification]",
+    "mutation markNotificationAsRead($id: ID!) -> Notification",
+    "mutation respondToInvitation($projectId, $accept) -> ProjectMember",
+    "mutation addProjectMember($input: AddProjectMemberInput!) -> ProjectMember",
+    "mutation removeProjectMember($memberId: ID!) -> Boolean",
+    "query me -> UserProfile",
+    "query platformStats -> { activeProjects, supervisors, students, semesters }"
+  ]
+}

@@ -1,0 +1,86 @@
+---
+title: "Environment variables for PROJEIC frontend"
+description: "Set NEXT_PUBLIC_BACKEND_URL to connect PROJEIC Frontend to your backend. Covers Railway auto-detection fallback and Next.js build-time variable inlining."
+---
+
+The PROJEIC Frontend reads environment variables at build time and runtime to know where your backend lives. In most cases, only one variable needs to be set: `NEXT_PUBLIC_BACKEND_URL`. Without it, the frontend falls back to a hostname-based auto-detection strategy that works on Railway but will not work in arbitrary self-hosted environments.
+
+## Variables reference
+
+### `NEXT_PUBLIC_BACKEND_URL`
+
+| Field       | Value                                      |
+|-------------|--------------------------------------------|
+| Required    | Yes (for production self-hosting)          |
+| Type        | URL string (no trailing slash)             |
+| Example     | `https://your-backend.example.com`         |
+
+This variable tells the frontend where to reach the PROJEIC GraphQL API. It is read client-side, so the `NEXT_PUBLIC_` prefix is mandatory — Next.js inlines it into the browser bundle at build time.
+
+The full GraphQL endpoint the frontend constructs is:
+
+```
+{NEXT_PUBLIC_BACKEND_URL}/projeic/api/graphql
+```
+
+<Warning>
+`NEXT_PUBLIC_BACKEND_URL` must point to the **backend** service, not the frontend itself. Setting it to the frontend's own URL will cause every GraphQL request to fail.
+</Warning>
+
+## Auto-detection fallback logic
+
+When `NEXT_PUBLIC_BACKEND_URL` is not set, the frontend inspects `window.location.hostname` at runtime and selects a backend URL automatically (see `src/lib/graphQLClient.ts`):
+
+```typescript
+const getBackendUrl = () => {
+  if (typeof window === "undefined") return "";
+
+  if (process.env.NEXT_PUBLIC_BACKEND_URL) {
+    return process.env.NEXT_PUBLIC_BACKEND_URL;
+  }
+
+  if (window.location.hostname.includes("development.up.railway.app")) {
+    return "https://projeicbackend-development.up.railway.app";
+  }
+
+  if (window.location.hostname.includes("production.up.railway.app")) {
+    return "https://projeicbackend-production.up.railway.app";
+  }
+
+  return "http://localhost:4000";
+};
+```
+
+The resolution order is:
+
+1. **`NEXT_PUBLIC_BACKEND_URL`** — always wins if set.
+2. **Railway development** — used when the hostname contains `development.up.railway.app`, pointing to `https://projeicbackend-development.up.railway.app`.
+3. **Railway production** — used when the hostname contains `production.up.railway.app`, pointing to `https://projeicbackend-production.up.railway.app`.
+4. **Local fallback** — `http://localhost:4000` for all other cases.
+
+<Note>
+For local development, the frontend defaults to `http://localhost:4000` when no environment variable is set. Make sure your backend is running on that port before starting `npm run dev`.
+</Note>
+
+This fallback is intentional for Railway-hosted deployments. For any other hosting environment — including Docker on your own infrastructure — you **must** set `NEXT_PUBLIC_BACKEND_URL` explicitly, because the hostname will not match any Railway pattern.
+
+## Example `.env.local`
+
+Create a `.env.local` file at the project root to configure your local or custom deployment:
+
+```env
+# URL of the PROJEIC backend (no trailing slash)
+NEXT_PUBLIC_BACKEND_URL=https://your-backend.example.com
+```
+
+<Note>
+`.env.local` is listed in `.dockerignore` and is never copied into the Docker image. For Docker or Railway deployments, pass environment variables at runtime using `-e` flags or the platform's environment settings panel.
+</Note>
+
+## Next.js `NEXT_PUBLIC_` convention
+
+Any variable prefixed with `NEXT_PUBLIC_` is embedded into the client-side JavaScript bundle by Next.js at **build time**. This means:
+
+- The value is visible in the browser — do not use this prefix for secrets.
+- Changing the value after a build has no effect; you must rebuild the image.
+- Server-side code (API routes, middleware) can also read the variable, but it is not required for that — it is required only because the GraphQL client runs in the browser.
